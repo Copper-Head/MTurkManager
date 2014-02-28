@@ -36,8 +36,8 @@ nosetests.xml
 .pydevproject
 
 # Vim files
-.swp
-.rope*
+*.swp
+*.rope*
 
 # Amazon AWS security keys
 *rootkey*
