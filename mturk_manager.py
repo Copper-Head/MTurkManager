@@ -1,6 +1,6 @@
 
-# This program is free and subject to the conditions of the MIT license.
-# If you care to read that, here's a link:
+#To-do:
+    #turn English test into text file?
 # http://opensource.org/licenses/MIT
 
 #===================== IMPORTS --- SETUP --- GLOBAL VARS ======================
@@ -10,6 +10,8 @@ import re
 
 #import stuff from boto
 from boto.mturk.question import *
+from boto.mturk.connection import MTurkConnection
+from argparse import ArgumentParser
 
 
 class AnswerKey(ValidatingXML, list):
@@ -102,11 +104,97 @@ def parse_question_file(file_name):
     return QuestionForm(question_list)
 
 
+def find_file(f_type, folder):
+    NO_FILE_ERROR = 'No "{}" files found. Cannot proceed without them'
+    MULTIPLE_FILE_WARNING = 'More than one "{}" file found. Using this one: {}'
+    candidates = [f for f in os.listdir(folder)
+                  if f.endswith(f_type)]
+    assert len(candidates) > 0, NO_FILE_ERROR.format(f_type)
+    if len(candidates) > 1:
+        print MULTIPLE_FILE_WARNING.format(f_type, candidates[0])
+    return candidates[0]
+
+
+def process_key_file(f_name):
+    with open(f_name, 'rU') as File:
+        return dict((line.strip().split('=') for line in File))
+
+
+def process_properties_file(f_name):
+    start = {
+        'retrydelayinseconds': '15',
+        'testdurationinseconds':  '900'
+    }
+    with open(f_name, 'rU') as File:
+        from_file = dict((line.strip().split('=')
+                          for line in File
+                          if (bool(line.strip()) and line[0] != '#')))
+    start.update(from_file)
+    return start
+
+
+class MissingFolderException(Exception):
+    MESSAGE = '''Unable to find the folder "{}".
+Please specify a valid folder name.
+It's case sensitive.'''
+
+    def __init__(self, folder):
+        self.folder = folder
+
+    def __str__(self):
+        return self.MESSAGE.format(self.folder)
+
+
+
 #================================= __MAIN__ ===================================
+
 def main():
-    with open('test.xml', 'w') as test:
+# set up argument parser
+    arg_parser = ArgumentParser(description='This program loads native qualification tests into MTurk.')
+    arg_parser.add_argument('language',
+                            help='This specifies the folder from which to read questions and answers.')
+    arg_parser.add_argument('account',
+                            help='This specifies the folder from which to read credential information.')
+    cmd_arg = arg_parser.parse_args()
+
+# set up language directory
+    root = os.getcwd()
+    if cmd_arg.language not in os.listdir(root):
+        raise Exception('Unable to find the folder with question and answer files. Please make sure to s')
+        lang_root = os.path.join(root, cmd_arg.language)
+    else:
+        raise kkk
+
+# load properties file
+    properties_f_name = find_file('properties', lang_root)
+    properties = process_properties_file(properties_f_name)
+
+# load question and answer src files
+    question_src = find_file('questions', lang_root)
+    question_xml = parse_question_file(question_src)
+    answer_src = find_file('answers', lang_root)
+    answer_xml = parse_answer_file(answer_src)
+
+# load secure keys
+    key_f_name = os.path.join(root, cmd_arg.account, 'rootkey.csv')
+    keys = process_key_file(key_f_name)
+# create connection
+    connection = MTurkConnection(aws_access_key_id=keys['AWSAccessKeyId'],
+                                 aws_secret_access_key=keys['AWSSecretKey'])
+
+# this is just development stuff
+    #with open('test.xml', 'w') as test:
         #test.write(parse_question_file('english.questions').get_as_xml())
-        test.write(parse_answer_file('english.answers').get_as_xml())
+        #test.write(parse_answer_file('english.answers').get_as_xml())
+
+    connection.create_qualification_type(name=properties['name'],
+                                         description=properties['description'],
+                                         test=question_xml,
+                                         answer_key=answer_xml,
+                                         status='Active',
+                                         keywords=properties['keywords'],
+                                         retry_delay=properties['retrydelayinseconds'],
+                                         test_duration=properties['testdurationinseconds'])
 
 #------------------------------------------------------------------------------
 if __name__ == '__main__':
