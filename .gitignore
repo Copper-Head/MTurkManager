@@ -38,3 +38,6 @@ nosetests.xml
 # Vim files
 .swp
 .rope*
+
+# Amazon AWS security keys
+*rootkey*
