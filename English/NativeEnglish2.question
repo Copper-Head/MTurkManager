@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+    <Overview>
+        <Title>Native English Proficiency Qualification</Title>
+	<Text>This test is designed to confirm that you are a native speaker of American English. To be a native speaker, you must have learned English before the age of 5, and not be more proficient in any other language.</Text>
+	<Text>Several of the questions will ask you to decide whether sentences are "acceptable." A sentence is acceptable if it sounds like something a native English speaker would say. It doesn't have to be "proper" like you were taught in school; it just has to sound natural.</Text>
+    </Overview>
+    <Question>
+		<QuestionIdentifier>q1</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following sentences is acceptable? Select ALL that apply.</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>There seems to be someone at the door.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			      <Text>It seems to be someone is at the door.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>There seems that someone is at the door.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>It seems that someone is at the door.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+    <Question>
+		<QuestionIdentifier>q2</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following continuations is acceptable? Select ALL that apply.</Text>
+			<Text>Ethan reads more books...</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>... than Mary.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			      <Text>... than Mary ever did.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>... than Mary reads newspapers.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>... than Mary likes authors who wrote.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>e</SelectionIdentifier>
+			      <Text>None of the above.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+	<Question>
+		<QuestionIdentifier>q3</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following questions is acceptable? Select ALL that apply.</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>Which restaurant did you review without visiting?</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			      <Text>Which restaurant did you review without visiting the website?</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>Which restaurant did you review the website without visiting?</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>None of the above.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+	<Question>
+		<QuestionIdentifier>q5</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following continuations is acceptable? Select ALL that apply.</Text>
+			<Text>I was talking to Susan about John. She said...</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>... she understood why he wanted some time alone this week.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			 	<Text>... she understood why he wanted any time alone this week.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>... she understood why did he want some time alone this week.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			 	<Text>... she understood why he wants some time alone this week.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>e</SelectionIdentifier>
+			      <Text>None of the above.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+	<Question>
+		<QuestionIdentifier>q6</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following sentences is acceptable? Select ALL that apply.</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>Sally asked Megan to buy beer for her 18-year-old friend.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			 	 <Text>Sally asked Megan to buy a beer for her 18-year-old friend.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>Sally asked Megan to buy some beer for her 18-year-old friend.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>None of the above.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+	<Question>
+		<QuestionIdentifier>q7</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following continuations of the sentence is acceptable? Select ALL that apply.</Text>
+			<Text>If you walk barefoot on the beach,...</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>... you get sand between your toes.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			 	 <Text>... you got sand between your toes.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>... you'll get sand between your toes.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>None of the above.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+	<Question>
+		<QuestionIdentifier>q8</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following continuations of the sentence is acceptable? Select ALL that apply.</Text>
+			<Text>I talked to Tom, and he said...</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>... that he wanted one more drink before he danced with that girl.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+	<Text>... that he wants one more drink before he danced with that girl.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>... that he wants one more drink before he dances with that girl.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>None of the above.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+	<Question>
+		<QuestionIdentifier>q9</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Which of the following would be an acceptable answer to the following question? Select ALL that apply.</Text>
+			<Text>Did Steven take out the trash this morning?</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>checkbox</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>a</SelectionIdentifier>
+			      <Text>He might have done.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>b</SelectionIdentifier>
+			 <Text>He might have.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>c</SelectionIdentifier>
+			      <Text>He did.</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>d</SelectionIdentifier>
+			      <Text>He might.</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+    	<Question>
+		<QuestionIdentifier>q10</QuestionIdentifier>
+		<QuestionContent>
+			<Text>Fill in the blank:</Text>
+			<Text>The girl who lived in the house on the corner asked ___ father to mow the lawn.</Text>
+		</QuestionContent>
+		<AnswerSpecification>
+			<SelectionAnswer>
+			  <StyleSuggestion>radiobutton</StyleSuggestion>
+			  <Selections>
+			    <Selection>
+			      <SelectionIdentifier>his</SelectionIdentifier>
+			      <Text>his</Text>
+			    </Selection>
+			    <Selection>
+			      <SelectionIdentifier>her</SelectionIdentifier>
+			      <Text>her</Text>
+			    </Selection>
+			  </Selections>
+			</SelectionAnswer>
+		</AnswerSpecification>
+	</Question>
+</QuestionForm>
