@@ -159,22 +159,33 @@ def find_file(f_type, folder):
     return candidates[0]
 
 
-def process_key_file(f_name):
-    with open(f_name, 'rU') as File:
-        return dict((line.strip().split('=') for line in File))
+def create_mturk_connection(account_folder):
+# load secure keys
+    key_f_name = os.path.join(account_folder, 'rootkey.csv')
+    keys = process_key_file(key_f_name)
+# create connection
+    return MTurkConnection(aws_access_key_id=keys['AWSAccessKeyId'],
+                           aws_secret_access_key=keys['AWSSecretKey'])
 
 
-def process_properties_file(f_name):
-    start = {
-        'retrydelayinseconds': '15',
-        'testdurationinseconds':  '900'
-    }
-    with open(f_name, 'rU') as File:
-        from_file = dict((line.strip().split('=')
-                          for line in File
-                          if (bool(line.strip()) and line[0] != '#')))
-    start.update(from_file)
-    return start
+def read_settings_file(f_path):
+    '''Common function for reading in properties and key files.
+    Given a file path returns a dictionary of key, value pairs read from 
+    the file found at the path.
+    Ignores comments and empty lines.
+    '''
+    # defined filtering function
+    not_comment_empty = lambda line: not line.startswith('#') and line.strip()
+    # open file for reading
+    with open(f_path) as settings_file:
+        # filter out comments and empty lines
+        lines_to_read = filter(not_comment_empty, settings_file)
+    # split lines across "=" character
+    split_lines = (line.split('=') for line in lines_to_read)
+    # remove all trailing whitespace
+    no_trailing_whtspc = (map(str.strip, pair) for pair in split_lines)
+    # convert to dictionary and return
+    return dict(no_trailing_whtspc)
 
 
 class MissingFolderException(Exception):
