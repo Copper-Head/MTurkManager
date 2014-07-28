@@ -13,28 +13,73 @@ from boto.mturk.question import *
 from boto.mturk.connection import MTurkConnection
 from argparse import ArgumentParser
 
+#================================= __MAIN__ ===================================
+
+
+def main():
+    # define some strings for ArgParser
+    progr_descr = 'This program loads native qualification tests into MTurk.'
+    lang_help = 'This specifies the folder from which to read questions and answers.'
+    account_help = 'This specifies the folder from which to read credential information.'
+# set up argument parser
+    arg_parser = ArgumentParser(description=progr_descr)
+    arg_parser.add_argument('language', help=lang_help)
+    arg_parser.add_argument('account', help=account_help)
+    cmd_arg = arg_parser.parse_args()
+
+# set up language directory
+    root = os.getcwd()
+    if cmd_arg.language not in os.listdir(root):
+        raise MissingFolderException(cmd_arg.language)
+
+    lang_root = os.path.join(root, cmd_arg.language)
+
+# load properties file
+    properties_f_name = find_file('properties', lang_root)
+    properties = process_properties_file(properties_f_name)
+
+# load question and answer src files
+    question_src = find_file('questions', lang_root)
+    question_xml = parse_question_file(question_src)
+    answer_src = find_file('answers', lang_root)
+    answer_xml = parse_answer_file(answer_src)
+
+    print question_xml
+# set up a connection.
+#     connection = create_mturk_connection(os.path.join(root, cmd_arg.account))
+
+# # create qualification test
+#     connection.create_qualification_type(name=properties['name'],
+#                                          description=properties['description'],
+#                                          test=question_xml,
+#                                          answer_key=answer_xml,
+#                                          status='Active',
+#                                          keywords=properties['keywords'],
+#                                          retry_delay=properties['retrydelayinseconds'],
+#                                          test_duration=properties['testdurationinseconds'])
+
 
 class AnswerKey(ValidatingXML, list):
-    schema_url = 'http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd'
-    xml_template = '''<?xml version="1.0" encoding="UTF-8"?>
-<AnswerKey xmlns="{}">
-    {}
-</AnswerKey>'''
+    schema_url = ('http://mechanicalturk.amazonaws.com/'
+        'AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd')
+    xml_template = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<AnswerKey xmlns="{schema_url}">\n'
+        '{answers}\n'
+        '</AnswerKey>\n')
 
     def get_as_xml(self):
         items = '\n'.join(item.get_as_xml() for item in self)
-        return self.xml_template.format(self.schema_url, items)
+        return self.xml_template.format(schema_url=self.schema_url, 
+            answers=items)
 
 
 class AnswerOption():
     def __init__(self, question_IDs, score):
         self.question_IDs = question_IDs
         self.score = score
-        self.template = '''
-        <AnswerOption>
-        {}
-        </AnswerOption>
-        '''
+        self.template = ('<AnswerOption>'
+            '{}\n'
+            '</AnswerOption>\n')
 
     def get_as_xml(self):
         IDs = [SimpleField('SelectionIdentifier', ID)
