@@ -1,6 +1,5 @@
-
-#To-do:
-    #turn English test into text file?
+#This script makes it easy to create and delete new qualification types in MTurk.
+#Please note that deleting qualification types is c
 # http://opensource.org/licenses/MIT
 
 #===================== IMPORTS --- SETUP --- GLOBAL VARS ======================
