@@ -77,19 +77,19 @@ class AnswerOption():
         self.question_IDs = question_IDs
         self.score = score
         self.template = ('<AnswerOption>'
-            '{}\n'
+            '{options}\n'
             '</AnswerOption>\n')
 
     def get_as_xml(self):
         IDs = [SimpleField('SelectionIdentifier', ID)
                for ID in self.question_IDs]
         fields = IDs + [SimpleField('AnswerScore', self.score)]
-        return self.template.format('\n'.join(f.get_as_xml()
-                                              for f in fields))
+        fields_combined = '\n'.join(f.get_as_xml() for f in fields)
+        return self.template.format(options=fields_combined)
 
 
 class QuestionAnswer(Question):
-    template = '<Question>{}\n{}</Question>'
+    template = '<Question>{0}\n{1}</Question>'
 
     def __init__(self, identifier, options):
         self.identifier = SimpleField('QuestionIdentifier', identifier)
@@ -149,14 +149,14 @@ def parse_question_file(file_name):
 
 
 def find_file(f_type, folder):
-    NO_FILE_ERROR = 'No "{}" files found. Cannot proceed without them'
-    MULTIPLE_FILE_WARNING = 'More than one "{}" file found. Using this one: {}'
+    NO_FILE_ERROR = 'No "{0}" files found. Cannot proceed without them'
+    MULTIPLE_FILE_WARNING = 'More than one "{0}" file found. Using this one: {1}'
     candidates = [f for f in os.listdir(folder)
                   if f.endswith(f_type)]
     assert len(candidates) > 0, NO_FILE_ERROR.format(f_type)
     if len(candidates) > 1:
         print MULTIPLE_FILE_WARNING.format(f_type, candidates[0])
-    return candidates[0]
+    return os.path.join(folder, candidates[0])
 
 
 def create_mturk_connection(account_folder):
@@ -189,9 +189,9 @@ def read_settings_file(f_path):
 
 
 class MissingFolderException(Exception):
-    MESSAGE = '''Unable to find the folder "{}".
-Please specify a valid folder name.
-It's case sensitive.'''
+    MESSAGE = ('Unable to find the folder "{}".\n'
+        'Please specify a valid folder name.\n'
+        'It is case sensitive.')
 
     def __init__(self, folder):
         self.folder = folder
