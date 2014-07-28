@@ -41,3 +41,6 @@ nosetests.xml
 
 # Amazon AWS security keys
 *rootkey*
+
+# sublime project files
+*sublime*
