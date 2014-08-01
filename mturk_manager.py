@@ -35,7 +35,7 @@ def main():
 
 # load properties file
     properties_f_name = find_file('properties', lang_root)
-    properties = process_properties_file(properties_f_name)
+    properties = read_settings_file(properties_f_name)
 
 # load question and answer src files
     question_src = find_file('questions', lang_root)
@@ -162,7 +162,7 @@ def find_file(f_type, folder):
 def create_mturk_connection(account_folder):
 # load secure keys
     key_f_name = os.path.join(account_folder, 'rootkey.csv')
-    keys = process_key_file(key_f_name)
+    keys = read_settings_file(key_f_name)
 # create connection
     return MTurkConnection(aws_access_key_id=keys['AWSAccessKeyId'],
                            aws_secret_access_key=keys['AWSSecretKey'])
