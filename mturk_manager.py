@@ -134,10 +134,11 @@ def parse_question_file(question_path):
         # native AnswerKey class and its code raises an error if anything other 
         # than a string is passed for the answer key XML.
         # Thus we have to use get_as_xml() to turn our AnswerKey into a string
-        return (QuestionForm(questions), AnswerKey(no_empty_answers).get_as_xml())
+        return (mt_q.QuestionForm(questions), 
+            AnswerKey(no_empty_answers).get_as_xml())
     # in case there are actually no entries for correct answers, return None as
     # second member of tuple
-    return (QuestionForm(questions), None)    
+    return (mt_q.QuestionForm(questions), None)    
 
 
 def split_by_question(file_str):
