@@ -8,7 +8,7 @@ import sys
 import re
 
 #import stuff from boto
-from boto.mturk.question import *
+from boto.mturk import question as mt_q
 from boto.mturk.connection import MTurkConnection
 from argparse import ArgumentParser
 
