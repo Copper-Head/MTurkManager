@@ -12,10 +12,10 @@ Here's what you need before you in order for this script to work:
 1. Latest version of [Python](https://www.python.org/download/)
 1. Python's [Boto](https://github.com/boto/boto) library for interacting with MTurk
 1. An access key file for your account. See [this](http://docs.aws.amazon.com/AWSMechTurk/latest/AWSMechanicalTurkRequester/MakingRequests_RequestAuthenticationArticle.html) for instructions how to request one.
-1. Your versions of the files found in the example folder. See [Formatting](#formatting) for details.
+1. Your versions of the files found in the example folder. See the Formatting section for details.
 
 
-Running {#running}
+Running
 --------
 Once all is set up, simply open your terminal, navigate to the folder where you saved the python script as well as your test files, and run:
 
@@ -25,7 +25,7 @@ Where ``TESTDIR`` is the name of the folder containing your qualification questi
 
 
 
-Formatting {#formatting}
+Formatting
 ------------------------
 The whole point of this program is to make creating MTurk qualification tests easy for *humans*. Thus its contribution is in defining a formatting syntax that's simple and intuitive.
 
@@ -47,7 +47,7 @@ The next line or lines are taken up by the content of the question. This is what
 Each answer has text delimited by **Answer** and **correct** labels. For readability it's a good idea to place these things on separate lines, but any whitespace between the labels and the text will do. The **correct** label is followed by a digit indicating whether the answer is correct or not. "1" here signals that the answer is correct, any other number means the opposite. Marking answers as correct is only useful if we want the test to be evaluated automatically by MTurk. Thus it is possible to indicate **no** correct answers to one question or *some* of them or *even all*.
 
 That is it for syntax, I hope it made sense!
-Once you have properties and question files that adhere to these guidelines ready, you can [run](#running) the script.
+Once you have properties and question files that adhere to these guidelines ready, you can run the script.
 
 
 Admin Stuff
