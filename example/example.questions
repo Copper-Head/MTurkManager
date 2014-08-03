@@ -1,0 +1,43 @@
+# This is an example of what a question definition file would look like.
+
+# A basic question definition follows below (more details in the documentation)
+
+# Question "insert type of question here"
+# "list of answers here"
+# Score "insert how many points this question is worth"
+
+# N.B.
+# currently comments inside question definitions are not supported!! 
+# Leaving comments in between questions is fine.
+
+Question radiobutton
+Which of the following sentences is acceptable? Select ALL that apply.
+Answer
+There seems to be someone at the door.
+correct 1
+Answer
+There seems to be someone else at the door.
+correct 0
+Score 1
+
+Question checkbox
+Which of the following sentences is acceptable? 
+Select ALL that apply.
+Answer
+Check this!
+correct 1
+Answer
+This check too!
+correct 1
+Score 1
+
+Question checkbox
+Which of the following sentences is acceptable? 
+Select any answer you want, none of them are correct :P
+Answer
+Check this!
+correct 0
+Answer
+This check too!
+correct 0
+Score 1
