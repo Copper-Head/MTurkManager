@@ -230,11 +230,7 @@ class MissingFolderException(Exception):
         self.folder = folder
 
     def __str__(self):
-        return self.MESSAGE.format(self.folder)
-
-
-def delete_qualification():
-    pass
+        return self.MESSAGE.format(folder_name=self.folder)
 
 
 #------------------------------------------------------------------------------
