@@ -1,47 +1,57 @@
-#This script makes it easy to create and delete new qualification types in MTurk.
-#Please note that deleting qualification types is c
-# http://opensource.org/licenses/MIT
+'''
+Mturk Manager.
 
-#===================== IMPORTS --- SETUP --- GLOBAL VARS ======================
+This script makes it easy to upload new qualification types into Amazon MTurk.
+
+Created by Ilia Kurenkov in 2014.
+License:
+http://opensource.org/licenses/MIT
+'''
+
+#===================== IMPORTS  ======================
 import os
-import sys
+# regular expressions
 import re
-
 #import stuff from boto
 from boto.mturk import question as mt_q
 from boto.mturk.connection import MTurkConnection
 from argparse import ArgumentParser
 
-#================================= __MAIN__ ===================================
-
 
 def main():
-    # define some strings for ArgParser
-    progr_descr = 'This program loads native qualification tests into MTurk.'
-    lang_help = 'This specifies the folder from which to read questions and answers.'
-    account_help = 'This specifies the folder from which to read credential information.'
+    '''Main driver function that gets excecuted if you run 
+    "python mturk_manager.py" from command line.
+    Uses argparser for command line arguments. 
+    Run "mturk_manager.py -h" for details.
+    '''
+    # define some help strings for ArgParser
+    program_description = 'This program loads qualification tests into MTurk.'
+    dir_help = ('This argument specifies the folder from which to read '
+                    'test properties and questions.')
+    account_help = ('This specifies the folder from which '
+                        'to read credential information.')
     # set up argument parser
-    arg_parser = ArgumentParser(description=progr_descr)
-    arg_parser.add_argument('language', help=lang_help)
+    arg_parser = ArgumentParser(description=program_description)
+    arg_parser.add_argument('testdir', help=dir_help)
     arg_parser.add_argument('account', help=account_help)
     cmd_arg = arg_parser.parse_args()
 
-    # set up language directory
+    # set up test directory path
     root = os.getcwd()
-    if cmd_arg.language not in os.listdir(root):
-        raise MissingFolderException(cmd_arg.language)
+    if cmd_arg.testdir not in os.listdir(root):
+        raise MissingFolderException(cmd_arg.testdir)
 
-    lang_root = os.path.join(root, cmd_arg.language)
+    test_root = os.path.join(root, cmd_arg.testdir)
 
     # load properties file
-    properties_f_name = find_file('properties', lang_root)
+    properties_f_name = find_file('properties', test_root)
     properties = read_settings_file(properties_f_name)
 
     # load question and answer src files
-    question_src = find_file('questions', lang_root)
+    question_src = find_file('questions', test_root)
     question_xml, answer_xml = parse_question_file(question_src)
 
-    # set up a connection.
+    # set up a connection to Mturk
     connection = create_mturk_connection(os.path.join(root, cmd_arg.account))
 
     # create qualification test
@@ -55,14 +65,62 @@ def main():
                                          test_duration=properties['testdurationinseconds'])
 
 
-def parse_question_file(file_name):
+def find_file(f_type, folder):
+    '''Given a file type (basically an extension) and a folder in which to 
+    search for this file type either returns a path to one file with the 
+    correct extension (should be same as f_type argument) or lets user know
+    that it cannot find any such file and halts the program.
+    '''
+    # make a list of files that fit
+    candidates = [f for f in os.listdir(folder)
+                  if f.endswith(f_type)]
+    # make sure we actually found at least one file
+    # if this is not the case, print NO_FILE_ERROR and halt
+    NO_FILE_ERROR = ('No "{file_type}" files found. '
+        'Cannot proceed without them')
+    assert len(candidates) > 0, NO_FILE_ERROR.format(file_type=f_type)
+    # if more than one file found, just alert the user about this
+    # and let them know which file we are using
+    if len(candidates) > 1:
+        MULTIPLE_FILE_WARNING = ('More than one "{file_type}" file found. ' 
+                                    'Using this one: {first_one}')
+        print MULTIPLE_FILE_WARNING.format(file_type=f_type, 
+                                            first_one=candidates[0])
+    # return usable file path
+    return os.path.join(folder, candidates[0])
 
-    with open(file_name, 'rU') as q_file:        
+
+def read_settings_file(f_path):
+    '''Common function for reading in properties and key files.
+    Given a file path returns a dictionary of key, value pairs read from 
+    the file found at the path.
+    Ignores comments and empty lines.
+    '''
+    # defined filtering function
+    not_comment_empty = lambda line: not line.startswith('#') and line.strip()
+    # open file for reading
+    with open(f_path) as settings_file:
+        # filter out comments and empty lines
+        lines_to_read = filter(not_comment_empty, settings_file)
+    # split lines across "=" character
+    split_lines = (line.split('=') for line in lines_to_read)
+    # remove all trailing whitespace
+    no_trailing_whtspc = (map(str.strip, pair) for pair in split_lines)
+    # convert to dictionary and return
+    return dict(no_trailing_whtspc)
+
+
+def parse_question_file(question_path):
+    '''Given path to file with all the questions reads this file, extracts
+    and parses the question info, then turns this into objects which will work
+    with boto's create_qualification_type() method.
+    '''
+    with open(question_path, 'rU') as q_file:        
         # read in the whole file
         file_str = q_file.read()
 
     # create list of (question, answers) tuples
-    questions_answers = individual_questions(file_str)
+    questions_answers = split_by_question(file_str)
     # questions separately from answers
     questions, answers = zip(*tuple(questions_answers))
     # finally convert to QuestionForm and AnswerKey objects
@@ -73,8 +131,10 @@ def parse_question_file(file_name):
     return (QuestionForm(questions), AnswerKey(answers).get_as_xml())    
 
 
-def individual_questions(file_str):
-
+def split_by_question(file_str):
+    '''Given a raw file string parses it into a list of mturk question and 
+    question answer (which is defined here) tuples.
+    '''
     # Define and compile regexes for searching through question file.
     question_search_str = ('Question (?P<type>\w*)\s*?'
         '(?P<content>.*?)'
@@ -86,13 +146,14 @@ def individual_questions(file_str):
             'correct (?P<correct>\d*)')
     a_rgx = re.compile(answers_search_str, flags=re.DOTALL)
 
-    parsed_questions = split_add_ids(file_str, qu_rgx, 'q')
+    # questions 
+    parsed_questions = search_add_ids(file_str, qu_rgx, 'q')
 
     # Having split the string into question items and attached IDs to them
     # we loop over collected info and feed it to different boto machinery
     for q_id, item in parsed_questions:
         # we start by splitting the answers field into individual answer items
-        q_answers = split_add_ids(item['answers'], a_rgx, 'a')
+        q_answers = search_add_ids(item['answers'], a_rgx, 'a')
         # needs (answer content, anwer identifier) tuples
         content_ids = [(answer['text'], answer_id) 
                             for answer_id, answer in q_answers]
@@ -116,8 +177,14 @@ def individual_questions(file_str):
                 QuestionAnswer(q_id, answer_options))
 
 
-def split_add_ids(string, rgx, suffix):
-
+def search_add_ids(string, rgx, suffix):
+    '''Takes a string, a regular expression and a suffix.
+    Uses regular expression to search through string and creates
+    a list of dictionaries from what it finds.
+    Then generates a list of IDs of the same length as list of dictionaries 
+    using the suffix argument.
+    Returns the result of combining dictionaries with their corresponding IDs.
+    '''
     # turn all matches to passe rgx into dictionaries where keys are taken 
     # from pattern names defined in rgx
     found_dicts = [match.groupdict() for match in rgx.finditer(string)]
@@ -130,27 +197,12 @@ def split_add_ids(string, rgx, suffix):
     return zip(IDs, found_dicts)
 
 
-def find_file(f_type, folder):
-    # make a list of files that fit
-    candidates = [f for f in os.listdir(folder)
-                  if f.endswith(f_type)]
-    # make sure we actually found at least one file
-    # if this is not the case, print NO_FILE_ERROR and halt
-    NO_FILE_ERROR = ('No "{file_type}" files found. '
-        'Cannot proceed without them')
-    assert len(candidates) > 0, NO_FILE_ERROR.format(file_type=f_type)
-    # if more than one file found, just alert the user about this
-    # and let them know which file we are using
-    if len(candidates) > 1:
-        MULTIPLE_FILE_WARNING = ('More than one "{file_type}" file found. ' 
-                                    'Using this one: {first_one}')
-        print MULTIPLE_FILE_WARNING.format(file_type=f_type, 
-                                            first_one=candidates[0])
-    # return usable file path
-    return os.path.join(folder, candidates[0])
-
-
 def create_mturk_connection(account_folder):
+    '''My wrapper for operations associated with creating a connection to mturk.
+    Given an account folder path, and optionally a rootkey file name, tries to
+    read it the appropriate key file settings for this account and open an
+    MTurkConnection based on what it collects.
+    '''
     # load secure keys
     key_f_name = os.path.join(account_folder, 'rootkey.csv')
     keys = read_settings_file(key_f_name)
@@ -159,27 +211,14 @@ def create_mturk_connection(account_folder):
                            aws_secret_access_key=keys['AWSSecretKey'])
 
 
-def read_settings_file(f_path):
-    '''Common function for reading in properties and key files.
-    Given a file path returns a dictionary of key, value pairs read from 
-    the file found at the path.
-    Ignores comments and empty lines.
-    '''
-    # defined filtering function
-    not_comment_empty = lambda line: not line.startswith('#') and line.strip()
-    # open file for reading
-    with open(f_path) as settings_file:
-        # filter out comments and empty lines
-        lines_to_read = filter(not_comment_empty, settings_file)
-    # split lines across "=" character
-    split_lines = (line.split('=') for line in lines_to_read)
-    # remove all trailing whitespace
-    no_trailing_whtspc = (map(str.strip, pair) for pair in split_lines)
-    # convert to dictionary and return
-    return dict(no_trailing_whtspc)
+################################################################################
+## Class definitions
+################################################################################
 
+# Since the official boto development is lagging behind our needs, I've created
+# a couple of classes that are needed to bridge the gap
 
-class AnswerKey(ValidatingXML, list):
+class AnswerKey(mt_q.ValidatingXML, list):
     schema_url = ('http://mechanicalturk.amazonaws.com/'
         'AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd')
     xml_template = ('<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -209,7 +248,7 @@ class AnswerOption():
         return self.template.format(options=fields_combined)
 
 
-class QuestionAnswer(Question):
+class QuestionAnswer(mt_q.Question):
     template = '<Question>\n{0}\n{1}\n</Question>'
 
     def __init__(self, identifier, options):
