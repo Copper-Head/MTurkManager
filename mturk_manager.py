@@ -101,51 +101,62 @@ class QuestionAnswer(Question):
                                     self.answer_options.get_as_xml())
 
 
-def parse_answer_file(file_name):
-    q_rgx = re.compile('Question (.*)')
-    score_rgx = re.compile('Score (.*)')
-    ans_rgx = re.compile('(Answer.+?)(?=Score)', flags=re.DOTALL)
-    a_rgx = re.compile('Answer (.+)')
-    with open(file_name, 'rU') as ans_file:
-        ans_file_str = ans_file.read()
-        questions = q_rgx.findall(ans_file_str)
-        scores = score_rgx.findall(ans_file_str)
-        answers = ans_rgx.findall(ans_file_str)
-        assert len(questions) == len(answers) == len(scores)
-    question_list = []
-    for indx in xrange(len(questions)):
-        q_answers = a_rgx.findall(answers[indx])
-        answer_opts = AnswerOption(q_answers, scores[indx])
-        question_list.append(QuestionAnswer(questions[indx], answer_opts))
-    return AnswerKey(question_list)
-
-
 def parse_question_file(file_name):
-    q_rgx = re.compile('Question (\d+) (.+)\s*(.+)')
-    a_rgx = re.compile('Answer (.+)\s*(.+)')
-    ans_rgx = re.compile('(Answer.+?)(?=Question|END)', flags=re.DOTALL)
-    with open(file_name, 'rU') as q_file:
-        q_file_str = q_file.read()
-        questions = q_rgx.findall(q_file_str)
-        answers = ans_rgx.findall(q_file_str)
-        assert len(questions) == len(answers)
-    question_list = []
-    for indx in xrange(len(questions)):
-        q_id = questions[indx][0]
-        q_type = questions[indx][1]
 
+    with open(file_name, 'rU') as q_file:        
+        # collect all question stuff
+        file_str = q_file.read()
+
+    questions_answers = individual_questions(file_str)
+    # questions separately from answers
+    questions, answers = zip(*tuple(questions_answers))
+    # finally converted to QuestionForm and AnswerKey objects
+    # unfortunately current version of boto lacks
+    # native AnswerKey class and its code raises an error
+    # if anything other than a string is passed for the answer key
+    # thus we have to use get_as_xml() to turn our AnswerKey into a string
+    return (QuestionForm(questions), AnswerKey(answers).get_as_xml())    
+
+
+def individual_questions(file_str):
+
+    search_str = ('Question (?P<type>\w*)\s*?'
+        '(?P<content>.*?)'
+        '(?P<answers>Answer.*?)'
+        'Score (?P<score>\d+?)')
+    qu_rgx = re.compile(search_str, flags=re.DOTALL)
+
+    answers_search = ('Answer(?P<text>.*?)\s*?'
+            'correct (?P<correct>\d*)')
+    a_rgx = re.compile(answers_search, flags=re.DOTALL)
+
+    collected = split_add_ids(file_str, qu_rgx, 'q')
+    for q_id, item in collected:
+        q_answers = split_add_ids(item['answers'], a_rgx, 'a')
+        # needs content, identifier tuples
+        content_ids = [(answer['text'], a_id) for a_id, answer in q_answers]
+        # which then get turned into a SelectionAnswer object
+        selection_ans = SelectionAnswer(selections=content_ids, 
+                                        style=item['type'])
+        # and then (all hail boto redundancy!!) into AnswerSpecification object
+        specification = AnswerSpecification(selection_ans)
+
+        # make list of answer ids for acceptable answers
+        acceptables = [a_id for a_id, ans in q_answers if ans['correct'] == '1']
+        answer_options = AnswerOption(acceptables, item['score'])
+
+        # QC doesn't have init, we have to use append_fields to populate it
         q_content = QuestionContent()
-        q_content.append_field('Text', questions[indx][2])
+        q_content.append_field('Text', item['content'])
 
-        q_answers = a_rgx.findall(answers[indx])
-        selection_ans = SelectionAnswer(
-            selections=[(x[1], x[0]) for x in q_answers],
-            style=q_type)
-        question_list.append(Question(q_id,
-                                      q_content,
-                                      AnswerSpecification(selection_ans),
-                                      is_required=True))
-    return QuestionForm(question_list)
+        yield (Question(q_id, q_content, specification, is_required=True),
+            QuestionAnswer(q_id, answer_options))
+
+
+def split_add_ids(string, rgx, suffix):
+    found_dicts = [match.groupdict() for match in rgx.finditer(string)]
+    IDs = map(lambda n: suffix + str(n), xrange(1, len(found_dicts) + 1))
+    return zip(IDs, found_dicts)
 
 
 def find_file(f_type, folder):
