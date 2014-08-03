@@ -20,161 +20,141 @@ def main():
     progr_descr = 'This program loads native qualification tests into MTurk.'
     lang_help = 'This specifies the folder from which to read questions and answers.'
     account_help = 'This specifies the folder from which to read credential information.'
-# set up argument parser
+    # set up argument parser
     arg_parser = ArgumentParser(description=progr_descr)
     arg_parser.add_argument('language', help=lang_help)
     arg_parser.add_argument('account', help=account_help)
     cmd_arg = arg_parser.parse_args()
 
-# set up language directory
+    # set up language directory
     root = os.getcwd()
     if cmd_arg.language not in os.listdir(root):
         raise MissingFolderException(cmd_arg.language)
 
     lang_root = os.path.join(root, cmd_arg.language)
 
-# load properties file
+    # load properties file
     properties_f_name = find_file('properties', lang_root)
     properties = read_settings_file(properties_f_name)
 
-# load question and answer src files
+    # load question and answer src files
     question_src = find_file('questions', lang_root)
-    question_xml = parse_question_file(question_src)
-    answer_src = find_file('answers', lang_root)
-    answer_xml = parse_answer_file(answer_src)
+    question_xml, answer_xml = parse_question_file(question_src)
 
-    print question_xml
-# set up a connection.
-#     connection = create_mturk_connection(os.path.join(root, cmd_arg.account))
+    # set up a connection.
+    connection = create_mturk_connection(os.path.join(root, cmd_arg.account))
 
-# # create qualification test
-#     connection.create_qualification_type(name=properties['name'],
-#                                          description=properties['description'],
-#                                          test=question_xml,
-#                                          answer_key=answer_xml,
-#                                          status='Active',
-#                                          keywords=properties['keywords'],
-#                                          retry_delay=properties['retrydelayinseconds'],
-#                                          test_duration=properties['testdurationinseconds'])
-
-
-class AnswerKey(ValidatingXML, list):
-    schema_url = ('http://mechanicalturk.amazonaws.com/'
-        'AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd')
-    xml_template = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<AnswerKey xmlns="{schema_url}">\n'
-        '{answers}\n'
-        '</AnswerKey>\n')
-
-    def get_as_xml(self):
-        items = '\n'.join(item.get_as_xml() for item in self)
-        return self.xml_template.format(schema_url=self.schema_url, 
-            answers=items)
-
-
-class AnswerOption():
-    def __init__(self, correct_ans, score):
-        self.correct_ans = correct_ans
-        self.score = score
-        self.template = ('<AnswerOption>\n'
-            '{options}\n'
-            '</AnswerOption>')
-
-    def get_as_xml(self):
-        IDs = [SimpleField('SelectionIdentifier', ID)
-               for ID in self.correct_ans]
-        fields = IDs + [SimpleField('AnswerScore', self.score)]
-        fields_combined = '\n'.join(f.get_as_xml() for f in fields)
-        return self.template.format(options=fields_combined)
-
-
-class QuestionAnswer(Question):
-    template = '<Question>\n{0}\n{1}\n</Question>'
-
-    def __init__(self, identifier, options):
-        self.identifier = SimpleField('QuestionIdentifier', identifier)
-        #self.answer_options = [opt.get_as_xml() for opt in options]
-        self.answer_options = options
-
-    def get_as_xml(self):
-        return self.template.format(self.identifier.get_as_xml(),
-                                    self.answer_options.get_as_xml())
+    # create qualification test
+    connection.create_qualification_type(properties['name'],
+                                         properties['description'],
+                                         'Active',
+                                         test=question_xml,
+                                         answer_key=answer_xml,
+                                         keywords=properties['keywords'],
+                                         retry_delay=properties['retrydelayinseconds'],
+                                         test_duration=properties['testdurationinseconds'])
 
 
 def parse_question_file(file_name):
 
     with open(file_name, 'rU') as q_file:        
-        # collect all question stuff
+        # read in the whole file
         file_str = q_file.read()
 
+    # create list of (question, answers) tuples
     questions_answers = individual_questions(file_str)
     # questions separately from answers
     questions, answers = zip(*tuple(questions_answers))
-    # finally converted to QuestionForm and AnswerKey objects
-    # unfortunately current version of boto lacks
-    # native AnswerKey class and its code raises an error
-    # if anything other than a string is passed for the answer key
-    # thus we have to use get_as_xml() to turn our AnswerKey into a string
+    # finally convert to QuestionForm and AnswerKey objects
+    # Unfortunately current version of boto lacks
+    # native AnswerKey class and its code raises an error if anything other 
+    # than a string is passed for the answer key XML.
+    # Thus we have to use get_as_xml() to turn our AnswerKey into a string
     return (QuestionForm(questions), AnswerKey(answers).get_as_xml())    
 
 
 def individual_questions(file_str):
 
-    search_str = ('Question (?P<type>\w*)\s*?'
+    # Define and compile regexes for searching through question file.
+    question_search_str = ('Question (?P<type>\w*)\s*?'
         '(?P<content>.*?)'
         '(?P<answers>Answer.*?)'
         'Score (?P<score>\d+?)')
-    qu_rgx = re.compile(search_str, flags=re.DOTALL)
+    qu_rgx = re.compile(question_search_str, flags=re.DOTALL)
 
-    answers_search = ('Answer(?P<text>.*?)\s*?'
+    answers_search_str = ('Answer(?P<text>.*?)\s*?'
             'correct (?P<correct>\d*)')
-    a_rgx = re.compile(answers_search, flags=re.DOTALL)
+    a_rgx = re.compile(answers_search_str, flags=re.DOTALL)
 
-    collected = split_add_ids(file_str, qu_rgx, 'q')
-    for q_id, item in collected:
+    parsed_questions = split_add_ids(file_str, qu_rgx, 'q')
+
+    # Having split the string into question items and attached IDs to them
+    # we loop over collected info and feed it to different boto machinery
+    for q_id, item in parsed_questions:
+        # we start by splitting the answers field into individual answer items
         q_answers = split_add_ids(item['answers'], a_rgx, 'a')
-        # needs content, identifier tuples
-        content_ids = [(answer['text'], a_id) for a_id, answer in q_answers]
+        # needs (answer content, anwer identifier) tuples
+        content_ids = [(answer['text'], answer_id) 
+                            for answer_id, answer in q_answers]
         # which then get turned into a SelectionAnswer object
-        selection_ans = SelectionAnswer(selections=content_ids, 
-                                        style=item['type'])
+        selection_ans = mt_q.SelectionAnswer(selections=content_ids, 
+                                            style=item['type'])
         # and then (all hail boto redundancy!!) into AnswerSpecification object
-        specification = AnswerSpecification(selection_ans)
+        specification = mt_q.AnswerSpecification(selection_ans)
 
         # make list of answer ids for acceptable answers
-        acceptables = [a_id for a_id, ans in q_answers if ans['correct'] == '1']
+        acceptables = [answer_id for answer_id, answer in q_answers 
+                                                    if ans['correct'] == '1']
+        # turn that into our AnswerOption object
         answer_options = AnswerOption(acceptables, item['score'])
 
-        # QC doesn't have init, we have to use append_fields to populate it
-        q_content = QuestionContent()
+        # QContent class has no init, we must use append_field to populate it
+        q_content = mt_q.QuestionContent()
         q_content.append_field('Text', item['content'])
 
-        yield (Question(q_id, q_content, specification, is_required=True),
-            QuestionAnswer(q_id, answer_options))
+        yield (mt_q.Question(q_id, q_content, specification, is_required=True),
+                QuestionAnswer(q_id, answer_options))
 
 
 def split_add_ids(string, rgx, suffix):
+
+    # turn all matches to passe rgx into dictionaries where keys are taken 
+    # from pattern names defined in rgx
     found_dicts = [match.groupdict() for match in rgx.finditer(string)]
-    IDs = map(lambda n: suffix + str(n), xrange(1, len(found_dicts) + 1))
+    # define function for creating a suffix
+    suffixer = lambda n: suffix + str(n)
+    # turn this into ids by creating an iterable of numbers 1:length of dict + 1
+    # then loop over this iterable applying suffixer to every member thereof
+    IDs = map(suffixer, xrange(1, len(found_dicts) + 1))
+    # combine these ID strings with the dictionaries
     return zip(IDs, found_dicts)
 
 
 def find_file(f_type, folder):
-    NO_FILE_ERROR = 'No "{0}" files found. Cannot proceed without them'
-    MULTIPLE_FILE_WARNING = 'More than one "{0}" file found. Using this one: {1}'
+    # make a list of files that fit
     candidates = [f for f in os.listdir(folder)
                   if f.endswith(f_type)]
-    assert len(candidates) > 0, NO_FILE_ERROR.format(f_type)
+    # make sure we actually found at least one file
+    # if this is not the case, print NO_FILE_ERROR and halt
+    NO_FILE_ERROR = ('No "{file_type}" files found. '
+        'Cannot proceed without them')
+    assert len(candidates) > 0, NO_FILE_ERROR.format(file_type=f_type)
+    # if more than one file found, just alert the user about this
+    # and let them know which file we are using
     if len(candidates) > 1:
-        print MULTIPLE_FILE_WARNING.format(f_type, candidates[0])
+        MULTIPLE_FILE_WARNING = ('More than one "{file_type}" file found. ' 
+                                    'Using this one: {first_one}')
+        print MULTIPLE_FILE_WARNING.format(file_type=f_type, 
+                                            first_one=candidates[0])
+    # return usable file path
     return os.path.join(folder, candidates[0])
 
 
 def create_mturk_connection(account_folder):
-# load secure keys
+    # load secure keys
     key_f_name = os.path.join(account_folder, 'rootkey.csv')
     keys = read_settings_file(key_f_name)
-# create connection
+    # create connection and return 
     return MTurkConnection(aws_access_key_id=keys['AWSAccessKeyId'],
                            aws_secret_access_key=keys['AWSSecretKey'])
 
@@ -199,8 +179,50 @@ def read_settings_file(f_path):
     return dict(no_trailing_whtspc)
 
 
+class AnswerKey(ValidatingXML, list):
+    schema_url = ('http://mechanicalturk.amazonaws.com/'
+        'AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd')
+    xml_template = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<AnswerKey xmlns="{schema_url}">\n'
+        '{answers}\n'
+        '</AnswerKey>\n')
+
+    def get_as_xml(self):
+        items = '\n'.join(item.get_as_xml() for item in self)
+        return self.xml_template.format(schema_url=self.schema_url, 
+            answers=items)
+
+
+class AnswerOption():
+    def __init__(self, correct_ans, score):
+        self.correct_answers = correct_ans
+        self.score = score
+        self.template = ('<AnswerOption>\n'
+                        '{options}\n'
+                        '</AnswerOption>')
+
+    def get_as_xml(self):
+        IDs = [SimpleField('SelectionIdentifier', ID)
+               for ID in self.correct_answers]
+        fields = IDs + [SimpleField('AnswerScore', self.score)]
+        fields_combined = '\n'.join(f.get_as_xml() for f in fields)
+        return self.template.format(options=fields_combined)
+
+
+class QuestionAnswer(Question):
+    template = '<Question>\n{0}\n{1}\n</Question>'
+
+    def __init__(self, identifier, options):
+        self.identifier = SimpleField('QuestionIdentifier', identifier)
+        self.answer_options = options
+
+    def get_as_xml(self):
+        return self.template.format(self.identifier.get_as_xml(),
+                                    self.answer_options.get_as_xml())
+
+
 class MissingFolderException(Exception):
-    MESSAGE = ('Unable to find the folder "{}".\n'
+    MESSAGE = ('Unable to find the folder "{folder_name}".\n'
         'Please specify a valid folder name.\n'
         'It is case sensitive.')
 
