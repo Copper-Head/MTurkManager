@@ -73,23 +73,23 @@ class AnswerKey(ValidatingXML, list):
 
 
 class AnswerOption():
-    def __init__(self, question_IDs, score):
-        self.question_IDs = question_IDs
+    def __init__(self, correct_ans, score):
+        self.correct_ans = correct_ans
         self.score = score
-        self.template = ('<AnswerOption>'
+        self.template = ('<AnswerOption>\n'
             '{options}\n'
-            '</AnswerOption>\n')
+            '</AnswerOption>')
 
     def get_as_xml(self):
         IDs = [SimpleField('SelectionIdentifier', ID)
-               for ID in self.question_IDs]
+               for ID in self.correct_ans]
         fields = IDs + [SimpleField('AnswerScore', self.score)]
         fields_combined = '\n'.join(f.get_as_xml() for f in fields)
         return self.template.format(options=fields_combined)
 
 
 class QuestionAnswer(Question):
-    template = '<Question>{0}\n{1}</Question>'
+    template = '<Question>\n{0}\n{1}\n</Question>'
 
     def __init__(self, identifier, options):
         self.identifier = SimpleField('QuestionIdentifier', identifier)
