@@ -123,12 +123,21 @@ def parse_question_file(question_path):
     questions_answers = split_by_question(file_str)
     # questions separately from answers
     questions, answers = zip(*tuple(questions_answers))
-    # finally convert to QuestionForm and AnswerKey objects
-    # Unfortunately current version of boto lacks
-    # native AnswerKey class and its code raises an error if anything other 
-    # than a string is passed for the answer key XML.
-    # Thus we have to use get_as_xml() to turn our AnswerKey into a string
-    return (QuestionForm(questions), AnswerKey(answers).get_as_xml())    
+    # answers list must be pruned for empty members
+    no_empty_answers = filter(None, answers)
+
+    if no_empty_answers:
+        # finally convert to QuestionForm and AnswerKey objects, but only if
+        # there are in fact any entries with correct answers.
+        # This handles cases where we want to score some (or all) questions manually.
+        # Unfortunately current version of boto lacks
+        # native AnswerKey class and its code raises an error if anything other 
+        # than a string is passed for the answer key XML.
+        # Thus we have to use get_as_xml() to turn our AnswerKey into a string
+        return (QuestionForm(questions), AnswerKey(no_empty_answers).get_as_xml())
+    # in case there are actually no entries for correct answers, return None as
+    # second member of tuple
+    return (QuestionForm(questions), None)    
 
 
 def split_by_question(file_str):
@@ -166,15 +175,20 @@ def split_by_question(file_str):
         # make list of answer ids for acceptable answers
         acceptables = [answer_id for answer_id, answer in q_answers 
                                                     if ans['correct'] == '1']
-        # turn that into our AnswerOption object
-        answer_options = AnswerOption(acceptables, item['score'])
+        # if the list isn't empty
+        if acceptables:
+            # turn that into our AnswerOption object
+            answer_options = AnswerOption(acceptables, item['score'])
+            correct_answers = QuestionAnswer(q_id, answer_options)
+        else:
+            correct_answers = None
 
         # QContent class has no init, we must use append_field to populate it
         q_content = mt_q.QuestionContent()
         q_content.append_field('Text', item['content'])
 
         yield (mt_q.Question(q_id, q_content, specification, is_required=True),
-                QuestionAnswer(q_id, answer_options))
+                correct_answers)
 
 
 def search_add_ids(string, rgx, suffix):
