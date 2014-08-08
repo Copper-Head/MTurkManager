@@ -178,7 +178,7 @@ def split_by_question(file_str):
 
         # make list of answer ids for acceptable answers
         acceptables = [answer_id for answer_id, answer in q_answers 
-                                                    if ans['correct'] == '1']
+                                                if answer['correct'] == '1']
         # if the list isn't empty
         if acceptables:
             # turn that into our AnswerOption object
@@ -258,9 +258,9 @@ class AnswerOption():
                         '</AnswerOption>')
 
     def get_as_xml(self):
-        IDs = [SimpleField('SelectionIdentifier', ID)
+        IDs = [mt_q.SimpleField('SelectionIdentifier', ID)
                for ID in self.correct_answers]
-        fields = IDs + [SimpleField('AnswerScore', self.score)]
+        fields = IDs + [mt_q.SimpleField('AnswerScore', self.score)]
         fields_combined = '\n'.join(f.get_as_xml() for f in fields)
         return self.template.format(options=fields_combined)
 
@@ -269,7 +269,7 @@ class QuestionAnswer(mt_q.Question):
     template = '<Question>\n{0}\n{1}\n</Question>'
 
     def __init__(self, identifier, options):
-        self.identifier = SimpleField('QuestionIdentifier', identifier)
+        self.identifier = mt_q.SimpleField('QuestionIdentifier', identifier)
         self.answer_options = options
 
     def get_as_xml(self):
