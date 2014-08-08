@@ -28,7 +28,7 @@ def main():
     program_description = 'This program loads qualification tests into MTurk.'
     dir_help = ('This argument specifies the folder from which to read '
                     'test properties and questions.')
-    account_help = ('This specifies the folder from which '
+    account_help = ('This specifies the key file from which '
                         'to read credential information.')
     # set up argument parser
     arg_parser = ArgumentParser(description=program_description)
@@ -52,7 +52,7 @@ def main():
     question_xml, answer_xml = parse_question_file(question_src)
 
     # set up a connection to Mturk
-    connection = create_mturk_connection(os.path.join(root, cmd_arg.account))
+    connection = create_mturk_connection(cmd_arg.account)
 
     # create qualification test
     connection.create_qualification_type(properties['name'],
@@ -212,14 +212,13 @@ def search_add_ids(string, rgx, suffix):
     return zip(IDs, found_dicts)
 
 
-def create_mturk_connection(account_folder):
+def create_mturk_connection(key_f_name):
     '''My wrapper for operations associated with creating a connection to mturk.
     Given an account folder path, and optionally a rootkey file name, tries to
     read it the appropriate key file settings for this account and open an
     MTurkConnection based on what it collects.
     '''
     # load secure keys
-    key_f_name = os.path.join(account_folder, 'rootkey.csv')
     keys = read_settings_file(key_f_name)
     # create connection and return 
     return MTurkConnection(aws_access_key_id=keys['AWSAccessKeyId'],

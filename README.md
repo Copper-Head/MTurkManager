@@ -19,9 +19,9 @@ Running
 --------
 Once all is set up, simply open your terminal, navigate to the folder where you saved the python script as well as your test files, and run:
 
-``python mturk_manager.py TESTDIR ACCOUNTDIR``
+``python mturk_manager.py TESTDIR ROOTKEYFILE``
 
-Where ``TESTDIR`` is the name of the folder containing your qualification question and properties files and ``ACCOUNTDIR`` is the name of the folder with your rootkey file. The script will run and notify you of its success or failure.
+Where ``TESTDIR`` is the name of the folder containing your qualification question and properties files and ``ROOTKEYFILE`` is the name of your rootkey file. The script will run and notify you of its success or failure.
 
 
 
