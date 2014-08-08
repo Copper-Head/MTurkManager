@@ -156,8 +156,11 @@ def split_by_question(file_str):
             'correct (?P<correct>\d*)')
     a_rgx = re.compile(answers_search_str, flags=re.DOTALL)
 
-    # questions 
-    parsed_questions = search_add_ids(file_str, qu_rgx, 'q')
+    # filter out all comments
+    no_comments = re.sub('#.*', '', file_str)
+
+    # extract question blocks
+    parsed_questions = search_add_ids(no_comments, qu_rgx, 'q')
 
     # Having split the string into question items and attached IDs to them
     # we loop over collected info and feed it to different boto machinery

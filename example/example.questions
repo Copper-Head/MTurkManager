@@ -7,8 +7,8 @@
 # Score "insert how many points this question is worth"
 
 # N.B.
-# currently comments inside question definitions are not supported!! 
-# Leaving comments in between questions is fine.
+# comments are now supported throughout the file, every part of a line that follows
+# a "#" will be ignored during parsing
 
 Question radiobutton
 Which of the following sentences is acceptable? Select ALL that apply.
