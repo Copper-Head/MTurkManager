@@ -13,7 +13,7 @@ Here's what you need before you in order for this script to work:
 1. Latest version of [Python](https://www.python.org/download/). This will work with 2.X, but I recommend installing 3.X, since this
 script now supports it and there's no reason not to use the latest and greatest!
 2. Python's [Boto](https://github.com/boto/boto) library for interacting with MTurk.
-3. An access key file for your account. See [this](http://docs.aws.amazon.com/AWSMechTurk/latest/AWSMechanicalTurkRequester/MakingRequests_RequestAuthenticationArticle.html) for instructions how to request one.
+3. An access key file for your account. See [this](http://docs.aws.amazon.com/AWSMechTurk/latest/AWSMechanicalTurkRequester/MakingRequests_RequestAuthenticationArticle.html) for instructions how to request one or (in case of UMD CNL lab) contact someone who you think has the key file.
 4. Your versions of the files found in the example folder. See the **Formatting** section for details.
 
 
@@ -31,7 +31,7 @@ Formatting
 ------------------------
 The purpose of this program is to make creating MTurk qualification tests easy for *humans*. Thus its contribution is in defining a formatting syntax that's simple and intuitive.
 
-We need two files to define a qualification test. One defines the qualification's properties such as its name and short description. This file's name should end in ".properties". The properties file is extremely easy to set up, just looking at the one in the **example** folder should be enough to understand how to create it.
+We need two files to set up a qualification test. One defines the qualification's properties, gives it a name and a short description. This file's name should end in ".properties". The properties file is extremely easy to set up, just looking at the one in the **example** folder should be enough to understand how to create it.
 The second file you'll need defines the actual questions that your qualification poses to the workers. This file's name should end in ".questions". Its syntax has a couple of quirks worth delving into. At this point you might find it useful to have the example.question file open so that you can look at what's being described below.
 
 The syntax may be easier to understand and learn if we first establish what MTurk needs to define a list of questions. Each question must contain some content (the question itself) and a list of answers to display. MTurk would also need to know whether several answers can be selected with checkboxes or just one with a radio button. Finally, we should specify how many points the question is worth. At the same time each of the answers to the question must contain a) some text and b) some indication whether it's the correct answer.
