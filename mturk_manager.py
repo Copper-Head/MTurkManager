@@ -1,73 +1,68 @@
 '''
-Mturk Manager.
+Mturk QualGen.
 
-This script makes it easy to upload new qualification types into Amazon MTurk.
+This script makes it easy to generate XML for new qualification types to
+be added to Amazon MTurk.
 
-Created by Ilia Kurenkov in 2014.
+Significantly revised (and simplified) by Ilia Kurenkov in April 2015.
 License:
 http://opensource.org/licenses/MIT
 '''
 
-#===================== IMPORTS  ======================
+# ==================== IMPORTS  ======================
 import os
-# regular expressions
 import re
-#import stuff from boto
-from boto.mturk import question as mt_q
-from boto.mturk.connection import MTurkConnection
+from collections import namedtuple
+from xml.dom import minidom
 from argparse import ArgumentParser
 
-
+# Read this function to understand what the script does when it's run.
 def main():
-    '''Main driver function that gets excecuted if you run 
+    '''Main driver function that gets excecuted if you run
     "python mturk_manager.py" from command line.
-    Uses argparser for command line arguments. 
+    Uses argparser for command line arguments.
     Run "mturk_manager.py -h" for details.
     '''
-    # define some help strings for ArgParser
+    # Set up command-line option parser
     program_description = 'This program loads qualification tests into MTurk.'
     dir_help = ('This argument specifies the folder from which to read '
-                    'test properties and questions.')
-    account_help = ('This specifies the key file from which '
-                        'to read credential information.')
-    # set up argument parser
+                'test properties and questions.'
+                'By default will look for an "example" folder.')
     arg_parser = ArgumentParser(description=program_description)
-    arg_parser.add_argument('testdir', help=dir_help)
-    arg_parser.add_argument('account', help=account_help)
+    arg_parser.add_argument('testdir',
+                            help=dir_help,
+                            nargs='?',
+                            default='example')
     cmd_arg = arg_parser.parse_args()
 
-    # set up test directory path
-    root = os.getcwd()
-    if cmd_arg.testdir not in os.listdir(root):
-        raise MissingFolderException(cmd_arg.testdir)
+    if cmd_arg is 'example':
+        print('Warning! You did not specify a target directory. Using "example".')
 
-    test_root = os.path.join(root, cmd_arg.testdir)
-
-    # load properties file
-    properties_f_name = find_file('properties', test_root)
+    # We start by loading a properties file. Currently only the "description"
+    # field is used.
+    properties_f_name = find_file('properties', cmd_arg.testdir)
     properties = read_settings_file(properties_f_name)
 
-    # load question and answer src files
-    question_src = find_file('questions', test_root)
-    question_xml, answer_xml = parse_question_file(question_src)
+    # load question and answer src file and parse it
+    question_src = find_file('questions', cmd_arg.testdir)
+    processed_qs = create_namedtuples(parse_question_file(question_src))
 
-    # set up a connection to Mturk
-    connection = create_mturk_connection(cmd_arg.account)
+    # Generating and writing XML
+    # first, we should set up a filename to use for writind
+    testname = os.path.basename(cmd_arg.testdir.rstrip('/'))
 
-    # create qualification test
-    connection.create_qualification_type(properties['name'],
-                                         properties['description'],
-                                         'Active',
-                                         test=question_xml,
-                                         answer_key=answer_xml,
-                                         keywords=properties['keywords'],
-                                         retry_delay=properties['retrydelayinseconds'],
-                                         test_duration=properties['testdurationinseconds'])
+    question_xml = build_question_xml(processed_qs, properties['description'])
+    question_fname = testname + '-questions.xml'
+    generate_pretty_xml(question_xml, os.path.join(cmd_arg.testdir, question_fname))
+
+    answers_xml = build_answerkey_xml(processed_qs)
+    answerkey_fname = testname + '-answerkey.xml'
+    generate_pretty_xml(answers_xml, os.path.join(cmd_arg.testdir, answerkey_fname))
 
 
 def find_file(f_type, folder):
-    '''Given a file type (basically an extension) and a folder in which to 
-    search for this file type either returns a path to one file with the 
+    '''Given a file type (basically an extension) and a folder in which to
+    search for this file type either returns a path to one file with the
     correct extension (should be same as f_type argument) or lets user know
     that it cannot find any such file and halts the program.
     '''
@@ -77,15 +72,15 @@ def find_file(f_type, folder):
     # make sure we actually found at least one file
     # if this is not the case, print NO_FILE_ERROR and halt
     NO_FILE_ERROR = ('No "{file_type}" files found. '
-        'Cannot proceed without them')
+                     'Cannot proceed without them')
     assert len(candidates) > 0, NO_FILE_ERROR.format(file_type=f_type)
     # if more than one file found, just alert the user about this
     # and let them know which file we are using
     if len(candidates) > 1:
-        MULTIPLE_FILE_WARNING = ('More than one "{file_type}" file found. ' 
-                                    'Using this one: {first_one}')
-        print MULTIPLE_FILE_WARNING.format(file_type=f_type, 
-                                            first_one=candidates[0])
+        MULTIPLE_FILE_WARNING = ('More than one "{file_type}" file found. '
+                                 'Using this one: {first_one}')
+        print(MULTIPLE_FILE_WARNING.format(file_type=f_type,
+                                           first_one=candidates[0]))
     # return usable file path
     return os.path.join(folder, candidates[0])
 
@@ -111,49 +106,22 @@ def read_settings_file(f_path):
 
 
 def parse_question_file(question_path):
-    '''Given path to file with all the questions reads this file, extracts
-    and parses the question info, then turns this into objects which will work
-    with boto's create_qualification_type() method.
+    '''Given path to file with all the questions reads both questions and answers
+    from it into a nested dictionary.
     '''
-    with open(question_path, 'rU') as q_file:        
+    with open(question_path, 'rU') as q_file:
         # read in the whole file
         file_str = q_file.read()
 
-    # create list of (question, answers) tuples
-    questions_answers = split_by_question(file_str)
-    # questions separately from answers
-    questions, answers = zip(*tuple(questions_answers))
-    # answers list must be pruned for empty members
-    no_empty_answers = filter(None, answers)
-
-    if no_empty_answers:
-        # finally convert to QuestionForm and AnswerKey objects, but only if
-        # there are in fact any entries with correct answers.
-        # This handles cases where we want to score some (or all) questions manually.
-        # Unfortunately current version of boto lacks
-        # native AnswerKey class and its code raises an error if anything other 
-        # than a string is passed for the answer key XML.
-        # Thus we have to use get_as_xml() to turn our AnswerKey into a string
-        return (mt_q.QuestionForm(questions), 
-            AnswerKey(no_empty_answers).get_as_xml())
-    # in case there are actually no entries for correct answers, return None as
-    # second member of tuple
-    return (mt_q.QuestionForm(questions), None)    
-
-
-def split_by_question(file_str):
-    '''Given a raw file string parses it into a list of mturk question and 
-    question answer (which is defined here) tuples.
-    '''
     # Define and compile regexes for searching through question file.
     question_search_str = ('Question (?P<type>\w*)\s*?'
-        '(?P<content>.*?)'
-        '(?P<answers>Answer.*?)'
-        'Score (?P<score>\d+?)')
+                           '(?P<content>.*?)'
+                           '(?P<answers>Answer.*?)'
+                           'Score (?P<score>\d+?)')
     qu_rgx = re.compile(question_search_str, flags=re.DOTALL)
 
     answers_search_str = ('Answer(?P<text>.*?)\s*?'
-            'correct (?P<correct>\d*)')
+                          'correct (?P<correct>\d*)')
     a_rgx = re.compile(answers_search_str, flags=re.DOTALL)
 
     # filter out all comments
@@ -162,133 +130,116 @@ def split_by_question(file_str):
     # extract question blocks
     parsed_questions = search_add_ids(no_comments, qu_rgx, 'q')
 
-    # Having split the string into question items and attached IDs to them
-    # we loop over collected info and feed it to different boto machinery
-    for q_id, item in parsed_questions:
-        # we start by splitting the answers field into individual answer items
-        q_answers = search_add_ids(item['answers'], a_rgx, 'a')
-        # needs (answer content, anwer identifier) tuples
-        content_ids = [(answer['text'], answer_id) 
-                            for answer_id, answer in q_answers]
-        # which then get turned into a SelectionAnswer object
-        selection_ans = mt_q.SelectionAnswer(selections=content_ids, 
-                                            style=item['type'])
-        # and then (all hail boto redundancy!!) into AnswerSpecification object
-        specification = mt_q.AnswerSpecification(selection_ans)
+    for q_dict in parsed_questions:
+        q_dict['content'] = q_dict['content'].strip()
+        q_dict['answers'] = search_add_ids(q_dict['answers'], a_rgx, 'a')
 
-        # make list of answer ids for acceptable answers
-        acceptables = [answer_id for answer_id, answer in q_answers 
-                                                if answer['correct'] == '1']
-        # if the list isn't empty
-        if acceptables:
-            # turn that into our AnswerOption object
-            answer_options = AnswerOption(acceptables, item['score'])
-            correct_answers = QuestionAnswer(q_id, answer_options)
-        else:
-            correct_answers = None
-
-        # QContent class has no init, we must use append_field to populate it
-        q_content = mt_q.QuestionContent()
-        q_content.append_field('Text', item['content'])
-
-        yield (mt_q.Question(q_id, q_content, specification, is_required=True),
-                correct_answers)
+    return parsed_questions
 
 
 def search_add_ids(string, rgx, suffix):
     '''Takes a string, a regular expression and a suffix.
-    Uses regular expression to search through string and creates
-    a list of dictionaries from what it finds.
-    Then generates a list of IDs of the same length as list of dictionaries 
-    using the suffix argument.
-    Returns the result of combining dictionaries with their corresponding IDs.
+    Uses regular expression to search through string and creates a list of dictionaries
+    from what it finds. To each dictionary in this list an "id" key is added.
     '''
-    # turn all matches to passe rgx into dictionaries where keys are taken 
+    # turn all matches to passed rgx into dictionaries where keys are taken
     # from pattern names defined in rgx
     found_dicts = [match.groupdict() for match in rgx.finditer(string)]
-    # define function for creating a suffix
-    suffixer = lambda n: suffix + str(n)
-    # turn this into ids by creating an iterable of numbers 1:length of dict + 1
-    # then loop over this iterable applying suffixer to every member thereof
-    IDs = map(suffixer, xrange(1, len(found_dicts) + 1))
-    # combine these ID strings with the dictionaries
-    return zip(IDs, found_dicts)
+    for n, match_dict in enumerate(found_dicts):
+        match_dict['id'] = suffix + str(n + 1)
+    return found_dicts
 
 
-def create_mturk_connection(key_f_name):
-    '''My wrapper for operations associated with creating a connection to mturk.
-    Given an account folder path, and optionally a rootkey file name, tries to
-    read it the appropriate key file settings for this account and open an
-    MTurkConnection based on what it collects.
+def create_namedtuples(parsed_questions):
+    Question = namedtuple('Question', 'id type content score answers')
+    Answer = namedtuple('Answer', 'id text correct')
+    for pq in parsed_questions:
+        pq['answers'] = [Answer(**ans) for ans in pq['answers']]
+
+    return [Question(**q) for q in parsed_questions]
+
+
+def build_question_xml(data, description):
+    # some boilerplate needed to start creating the document.
+    xmlns = ("http://mechanicalturk.amazonaws.com/"
+             "AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd")
+    impl = minidom.getDOMImplementation()
+
+    doc = impl.createDocument(None, 'QuestionForm', None)
+    root = doc.documentElement
+    root.setAttribute('xmlns', xmlns)
+
+    overview = sub_element(doc, root, 'Overview')
+    sub_element(doc, overview, 'Title', text=description)
+
+    for ques in data:
+        q_el = sub_element(doc, root, 'Question')
+        sub_element(doc, q_el, 'QuestionIdentifier', ques.id)
+        sub_element(doc, q_el, 'IsRequired', 'true')
+        q_content = sub_element(doc, q_el, 'QuestionContent')
+        add_cdata_element(doc, q_content, 'Text', ques.content)
+
+        ans_spec = sub_element(doc, q_el, 'AnswerSpecification')
+        selection_ans = sub_element(doc, ans_spec, 'SelectionAnswer')
+        sub_element(doc, selection_ans, 'StyleSuggestion', ques.type)
+        selections = sub_element(doc, selection_ans, 'Selections')
+        for a in ques.answers:
+            select = sub_element(doc, selections, 'Selection')
+            sub_element(doc, select, 'SelectionIdentifier', a.id)
+            add_cdata_element(doc, select, 'Text', a.text.strip())
+
+    return doc
+
+
+def build_answerkey_xml(data):
+    # some boilerplate needed to start creating the document.
+    xmlns = ("http://mechanicalturk.amazonaws.com/"
+             "AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd")
+    impl = minidom.getDOMImplementation()
+    doc = impl.createDocument(None, 'AnswerKey', None)
+    root = doc.documentElement
+    root.setAttribute('xmlns', xmlns)
+    for ques in data:
+        q_el = sub_element(doc, root, 'Question')
+        sub_element(doc, q_el, 'QuestionIdentifier', ques.id)
+        for a in ques.answers:
+            if not int(a.correct) > 0:
+                continue
+            option = sub_element(doc, q_el, 'AnswerOption')
+            sub_element(doc, option, 'SelectionIdentifier', text=a.id)
+            sub_element(doc, option, 'AnswerScore', ques.score)
+
+    return doc
+
+
+def sub_element(doc, parent, tag, text=None):
+    '''The workhorse of xml building. Creates a new element tagged with `tag`,
+    optionally adds text to it, then attaches it to `parent`. The new element is
+    returned.
     '''
-    # load secure keys
-    keys = read_settings_file(key_f_name)
-    # create connection and return 
-    return MTurkConnection(aws_access_key_id=keys['AWSAccessKeyId'],
-                           aws_secret_access_key=keys['AWSSecretKey'])
+    new_el = doc.createElement(tag)
+    if text is not None:
+        txt_node = doc.createTextNode(text)
+        new_el.appendChild(txt_node)
+
+    return parent.appendChild(new_el)
 
 
-################################################################################
-## Class definitions
-################################################################################
-
-# Since the official boto development is lagging behind our needs, I've created
-# a couple of classes that are needed to bridge the gap
-
-class AnswerKey(mt_q.ValidatingXML, list):
-    schema_url = ('http://mechanicalturk.amazonaws.com/'
-        'AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd')
-    xml_template = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<AnswerKey xmlns="{schema_url}">\n'
-        '{answers}\n'
-        '</AnswerKey>\n')
-
-    def get_as_xml(self):
-        items = '\n'.join(item.get_as_xml() for item in self)
-        return self.xml_template.format(schema_url=self.schema_url, 
-            answers=items)
+def add_cdata_element(doc, parent, tag, text):
+    '''CDATA needed slightly different treatment, but in essence this does the
+    same as `sub_element`.
+    '''
+    data_el = sub_element(doc, parent, tag)
+    cdata = doc.createCDATASection(text)
+    return data_el.appendChild(cdata)
 
 
-class AnswerOption():
-    def __init__(self, correct_ans, score):
-        self.correct_answers = correct_ans
-        self.score = score
-        self.template = ('<AnswerOption>\n'
-                        '{options}\n'
-                        '</AnswerOption>')
-
-    def get_as_xml(self):
-        IDs = [mt_q.SimpleField('SelectionIdentifier', ID)
-               for ID in self.correct_answers]
-        fields = IDs + [mt_q.SimpleField('AnswerScore', self.score)]
-        fields_combined = '\n'.join(f.get_as_xml() for f in fields)
-        return self.template.format(options=fields_combined)
+def generate_pretty_xml(xml, f_name):
+    # The options passed to writexml ensure the output is readable by a human.
+    # For some weird reason CDATA entries don't obey the indentation rules.
+    xml.writexml(open(f_name, 'w'), addindent='  ', newl='\n', encoding='UTF-8')
 
 
-class QuestionAnswer(mt_q.Question):
-    template = '<Question>\n{0}\n{1}\n</Question>'
-
-    def __init__(self, identifier, options):
-        self.identifier = mt_q.SimpleField('QuestionIdentifier', identifier)
-        self.answer_options = options
-
-    def get_as_xml(self):
-        return self.template.format(self.identifier.get_as_xml(),
-                                    self.answer_options.get_as_xml())
-
-
-class MissingFolderException(Exception):
-    MESSAGE = ('Unable to find the folder "{folder_name}".\n'
-        'Please specify a valid folder name.\n'
-        'It is case sensitive.')
-
-    def __init__(self, folder):
-        self.folder = folder
-
-    def __str__(self):
-        return self.MESSAGE.format(folder_name=self.folder)
-
-
-#------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 if __name__ == '__main__':
     main()
