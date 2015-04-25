@@ -86,8 +86,8 @@ def find_file(f_type, folder):
 
 
 def read_settings_file(f_path):
-    '''Common function for reading in properties and key files.
-    Given a file path returns a dictionary of key, value pairs read from 
+    '''Function for reading in properties files.
+    Given a file path returns a dictionary of (key, value) pairs read from
     the file found at the path.
     Ignores comments and empty lines.
     '''
@@ -97,12 +97,12 @@ def read_settings_file(f_path):
     with open(f_path) as settings_file:
         # filter out comments and empty lines
         lines_to_read = filter(not_comment_empty, settings_file)
-    # split lines across "=" character
-    split_lines = (line.split('=') for line in lines_to_read)
-    # remove all trailing whitespace
-    no_trailing_whtspc = (map(str.strip, pair) for pair in split_lines)
-    # convert to dictionary and return
-    return dict(no_trailing_whtspc)
+        # split lines across "=" character
+        split_lines = (line.split('=') for line in lines_to_read)
+        # remove all trailing whitespace
+        no_trailing_whtspc = (map(str.strip, pair) for pair in split_lines)
+        # convert to dictionary and return
+        return dict(no_trailing_whtspc)
 
 
 def parse_question_file(question_path):
