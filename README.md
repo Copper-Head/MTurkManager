@@ -10,8 +10,7 @@ Prerequisites
 
 Here's what you need before you in order for this script to work:
 
-1. Latest version of [Python](https://www.python.org/download/). This will work with 2.X, but I recommend installing 3.X, since this
-script now supports it and there's no reason not to use the latest and greatest!
+1. Latest version of [Python](https://www.python.org/download/). This will *not* work with 2.X, 3.X is required!
 4. Your versions of the files found in the example folder. See the **Formatting** section for details.
 
 
