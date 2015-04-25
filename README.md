@@ -1,4 +1,4 @@
-Mturk Manager v0.2.0
+Mturk Qualification Generator
 ==========================
 
 This program is intended to simplify the process of uploading any qualification to MTurk. In the past we've had to use either Amazon's clunky system of self-generating bash files or a small hacky script written in haste to for a deadline. Both involved creating the XML for qualification content manually. Here we try to make life a little simpler by parsing a regular text file with some simple formatting easily readable and formattable by humans into XML and then uploading that to the Amazon server.
@@ -12,29 +12,27 @@ Here's what you need before you in order for this script to work:
 
 1. Latest version of [Python](https://www.python.org/download/). This will work with 2.X, but I recommend installing 3.X, since this
 script now supports it and there's no reason not to use the latest and greatest!
-2. Python's [Boto](https://github.com/boto/boto) library for interacting with MTurk.
-3. An access key file for your account. See [this](http://docs.aws.amazon.com/AWSMechTurk/latest/AWSMechanicalTurkRequester/MakingRequests_RequestAuthenticationArticle.html) for instructions how to request one or (in case of UMD CNL lab) contact someone who you think has the key file.
 4. Your versions of the files found in the example folder. See the **Formatting** section for details.
 
 
 Running
 --------
-Once all is set up, simply open your terminal, navigate to the folder where you saved the python script as well as your test files, and run:
+Once all is set up, simply open your terminal, navigate to the folder where you saved the python script and run:
 
-``python mturk_manager.py TESTDIR ROOTKEYFILE``
+``python mturk_manager.py TESTDIR``
 
-Where ``TESTDIR`` is the name of the folder containing your qualification question and properties files and ``ROOTKEYFILE`` is the name of your rootkey file. The script will run and notify you of its success or failure.
+Where ``TESTDIR`` is the path to the folder containing your qualification question and properties files. This path can be relative (e.g. just the name of the folder if it's in the same folder as the script) or the full absolute path.
 
 
 
 Formatting
 ------------------------
-The purpose of this program is to make creating MTurk qualification tests easy for *humans*. Thus its contribution is in defining a formatting syntax that's simple and intuitive.
+The purpose of this program is to make creating MTurk qualification tests easy for *humans*. Thus its contribution is in defining a simple and intuitive syntax for qualification definitions.
 
 We need two files to set up a qualification test. One defines the qualification's properties, gives it a name and a short description. This file's name should end in ".properties". The properties file is extremely easy to set up, just looking at the one in the **example** folder should be enough to understand how to create it.
-The second file you'll need defines the actual questions that your qualification poses to the workers. This file's name should end in ".questions". Its syntax has a couple of quirks worth delving into. At this point you might find it useful to have the example.question file open so that you can look at what's being described below.
+The second file you'll need defines the actual questions that your qualification poses to the workers. This file's name should end in ".questions". Its syntax has a couple of quirks that will be covered in detail below. At this point you might find it useful to have the example.question file open so that you can look at what's being described below.
 
-The syntax may be easier to understand and learn if we first establish what MTurk needs to define a list of questions. Each question must contain some content (the question itself) and a list of answers to display. MTurk would also need to know whether several answers can be selected with checkboxes or just one with a radio button. Finally, we should specify how many points the question is worth. At the same time each of the answers to the question must contain a) some text and b) some indication whether it's the correct answer.
+The syntax may be easier to understand and learn if we first establish what MTurk needs to define a list of questions. Each question must contain some content (the question itself) and a list of answers to display. MTurk would also need to know whether several answers can be selected with checkboxes or just one with a radio button. Finally, we should specify how many points the question is worth. Each of the answers to the question must contain a) some text and b) some indication whether it's the correct answer.
 
 With this in mind, let's look at one entry in example.questions. It starts with **Question XX**, where **XX** indicates what kind of question it is. The types currently supported by boto are listed below. With the exception of the last two, all the names are self-explanatory.
 
@@ -55,4 +53,4 @@ Once you have properties and question files that adhere to these guidelines read
 
 Admin Stuff
 -----------
-This project is open source, you can fork and modify the code to your heart's content. See LICENSE for legal information. The program is minimally maintained by [Ilia Kurenkov](mailto:ilia.kurenkov@gmail.com) who cannot guarantee a timely response or that he'll have time to address your issue but promises to look into everything that gets reported.
+This project is open source, you can fork and modify the code to your heart's content. See LICENSE for legal information. The program is minimally maintained by the Cognitive Neuroscience Lab at University of Maryland College Park.

@@ -16,6 +16,7 @@ from collections import namedtuple
 from xml.dom import minidom
 from argparse import ArgumentParser
 
+
 # Read this function to understand what the script does when it's run.
 def main():
     '''Main driver function that gets excecuted if you run
@@ -24,7 +25,8 @@ def main():
     Run "mturk_manager.py -h" for details.
     '''
     # Set up command-line option parser
-    program_description = 'This program loads qualification tests into MTurk.'
+    program_description = ('This program generates qualification test XML '
+                           'that can be seng to MTurk.')
     dir_help = ('This argument specifies the folder from which to read '
                 'test properties and questions.'
                 'By default will look for an "example" folder.')
